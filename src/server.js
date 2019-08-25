@@ -1,23 +1,59 @@
+const fs = require('fs');
 const http = require('http');
-const url = require('url');
+const https = require('https');
+const privateKey  = fs.readFileSync(__dirname + '/sslcert/server.key', 'utf8');
+const certificate = fs.readFileSync(__dirname + '/sslcert/server.crt', 'utf8');
+const credentials = {key: privateKey, cert: certificate};
+const express = require('express');
+const app = express();
+
+app.set('json spaces', 2);
 
 const morgan = require('morgan');
-const router = require('./routes/router');
+//const router = require('./routes/router');
 
 const logger = morgan('combined');
 
-const startServer = port => {
-  const server = http.createServer((request, response) => {
-    // Get route from the request
-    const parsedUrl = url.parse(request.url);
-
-    // Get router function
-    const func = router[parsedUrl.pathname] || router.default;
-
-    logger(request, response, () => func(request, response));
+const startServer = (httpPort, httpsPort) => {
+  app.get('/products', function (req, res) {
+    fs.readFile(__dirname + '/db/products/all-products.json', 'utf8', (err, json) => {
+      let products = JSON.parse(json);
+      if (req.query.category) {
+        products = products.filter(prod => {
+          return prod.categories.indexOf(req.query.category) !== -1;
+        });
+      }
+      let status = 'success';
+      if (products.length === 0) {
+        status = 'no products';
+      }
+      
+      res.send({
+        status: status,
+        products: products
+      });
+    });
   });
 
-  server.listen(port);
+  app.get('/products/:ids', function (req, res) {
+    let ids = req.params.ids.split(',').map(id => parseInt(id));
+    fs.readFile(__dirname + '/db/products/all-products.json', 'utf8', (err, json) => {
+      let products = JSON.parse(json);
+      let resProducts = products.filter(prod => {
+        return ids.indexOf(prod.id) !== -1;
+      });
+      res.send({
+        status: 'success',
+        products: resProducts
+      });
+    });
+  });
+
+  const httpServer = http.createServer(app);
+  const httpsServer = https.createServer(credentials, app);
+
+  httpServer.listen(httpPort);
+  httpsServer.listen(httpsPort);
 };
 
 module.exports = startServer;
