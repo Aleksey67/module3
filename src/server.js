@@ -4,10 +4,12 @@ const https = require('https');
 const privateKey  = fs.readFileSync(__dirname + '/sslcert/server.key', 'utf8');
 const certificate = fs.readFileSync(__dirname + '/sslcert/server.crt', 'utf8');
 const credentials = {key: privateKey, cert: certificate};
+const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
 
 app.set('json spaces', 2);
+app.use(bodyParser.json());
 
 const morgan = require('morgan');
 //const router = require('./routes/router');
@@ -45,6 +47,18 @@ const startServer = (httpPort, httpsPort) => {
       res.send({
         status: 'success',
         products: resProducts
+      });
+    });
+  });
+
+  app.post('/signup', function (req, res) {
+    let post = req.body;
+    let body = JSON.stringify(post, null, 2);
+    let path = __dirname + '/db/users/' + post.username + '.json';
+    fs.writeFile(path, body, (err, result) => {
+      res.send({
+        status: 'success',
+        user: post
       });
     });
   });
