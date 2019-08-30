@@ -63,6 +63,42 @@ const startServer = (httpPort, httpsPort) => {
     });
   });
 
+  app.post('/users', function (req, res) {
+    let user = req.body;
+
+    let usersPath = __dirname + '/db/users/all-users.json';
+    fs.readFile(usersPath, 'utf8', (err, json) => {
+      let users;
+      if (err) {
+        users = [];
+      } else {
+        users = JSON.parse(json);
+      }
+
+      user.id = Math.round(Math.random() * 1000000);
+      users.push(user);
+
+      let usersJson = JSON.stringify(users, null, 2);
+
+      fs.writeFile(usersPath, usersJson, (err, result) => {
+        res.send({
+          status: 'success',
+          user: user
+        });
+      });
+    });
+  });
+
+  app.get('/users/:id', function (req, res) {
+    let userId = req.params.id;
+    fs.readFile(__dirname + '/db/users/all-users.json', 'utf8', (err, json) => {
+      let users = JSON.parse(json);
+      let user = users.find(user => user.id == userId);
+      let result = user || {status: 'not found'};
+      res.send(result);
+    });
+  });
+
   const httpServer = http.createServer(app);
   const httpsServer = https.createServer(credentials, app);
 
