@@ -99,6 +99,32 @@ const startServer = (httpPort, httpsPort) => {
     });
   });
 
+  app.post('/orders', function(req, res) {
+    let order = req.body;
+    fs.readFile(__dirname + '/db/products/all-products.json', 'utf8', (err, json) => {
+      let allProducts = JSON.parse(json);
+      let products = order.products.map(prodId => {
+        return allProducts.find(prod => prod.id === prodId);
+      });
+
+      let isMissing = products.some(p => p == null);
+      if (isMissing) {
+        res.send({status: 'failed', order: null});
+        return;
+      }
+
+      order.id = Math.round(Math.random() * 1000000);
+
+      let orderJson = JSON.stringify(order, null, 2);
+      fs.writeFile(__dirname + '/db/orders/' + order.id + '.json', orderJson, (err, result) => {
+        res.send({
+          status: 'success',
+          order: order
+        });
+      });
+    });
+  });
+
   const httpServer = http.createServer(app);
   const httpsServer = https.createServer(credentials, app);
 
